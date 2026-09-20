@@ -68,7 +68,7 @@ export function Heatmap({ year, month, stats, onPrev, onNext, canNext }: Props) 
                   isSel && styles.selected,
                 ]}
               >
-                <Text style={[styles.dayNum, level >= 3 && { color: colors.text }]}>{date.getDate()}</Text>
+                <Text style={[styles.dayNum, level >= 3 && { color: colors.bg }]}>{date.getDate()}</Text>
               </Pressable>
             </View>
           );
@@ -101,7 +101,14 @@ export function formatMinutes(min: number) {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderRadius: 24, padding: space.md, paddingTop: space.lg },
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: 24,
+    padding: space.md,
+    paddingTop: space.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.cardBorder,
+  },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.sm, marginBottom: space.md },
   arrow: { fontFamily: fonts.light, fontSize: 30, color: colors.cardText, lineHeight: 32, paddingHorizontal: space.sm },
   title: { fontFamily: fonts.semibold, fontSize: 16, color: colors.cardText },
@@ -110,7 +117,7 @@ const styles = StyleSheet.create({
   cellWrap: { width: `${100 / 7}%`, aspectRatio: 1, padding: 3, alignItems: 'center', justifyContent: 'center' },
   weekday: { fontFamily: fonts.medium, fontSize: 11, color: colors.cardMuted },
   cell: { width: '100%', height: '100%', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  today: { borderWidth: 1.5, borderColor: colors.cardText },
+  today: { borderWidth: 1.5, borderColor: 'rgba(238,242,251,0.55)' },
   selected: { transform: [{ scale: 1.08 }] },
   dayNum: { fontFamily: fonts.medium, fontSize: 11, color: colors.cardMuted },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: space.md, paddingHorizontal: space.xs },

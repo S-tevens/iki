@@ -8,11 +8,12 @@ export const colors = {
   textMuted: '#8C9AC0',
   textFaint: '#56648C',
   danger: '#E26D6D',
-  card: '#EEF2FB',
-  cardText: '#0B1F55',
-  cardMuted: '#6B7899',
-  // Heatmap sits on a light card so more study time reads as a darker cell.
-  heat: ['#DCE3F4', '#A9BCE8', '#6F8FD6', '#2F57B5', '#113485', '#081A47'],
+  card: '#101F45',
+  cardBorder: 'rgba(238,242,251,0.07)',
+  cardText: '#EEF2FB',
+  cardMuted: '#8C9AC0',
+  // On a dark card the scale has to climb toward light, or heavy days would sink into the background.
+  heat: ['#16244C', '#1E3A7A', '#2F57B5', '#4C7BE0', '#7DA6FF', '#B6CDFF'],
 };
 
 export function heatLevel(minutes: number) {
