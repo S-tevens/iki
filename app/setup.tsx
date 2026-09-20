@@ -1,20 +1,14 @@
-import Slider from '@react-native-community/slider';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { recentPurposes } from '../src/db/sessions';
 import { startSession } from '../src/services/session';
-import { useTimer } from '../src/store/timer';
-import { colors, DISTRACTIONS, fonts, MAX_MINUTES, MIN_MINUTES, space } from '../src/theme';
-
-const PRESETS = [25, 50, 90, 120];
+import { colors, DISTRACTIONS, fonts, space } from '../src/theme';
 
 export default function Setup() {
   const insets = useSafeAreaInsets();
-  const lastDuration = useTimer((s) => s.durationMs);
   const [purpose, setPurpose] = useState('');
-  const [minutes, setMinutes] = useState(Math.round(lastDuration / 60000));
   const [recent, setRecent] = useState<string[]>([]);
   const [checked, setChecked] = useState<Set<string>>(new Set());
 
@@ -25,7 +19,7 @@ export default function Setup() {
   const canStart = purpose.trim().length > 0;
 
   const start = async () => {
-    await startSession(purpose, minutes * 60 * 1000);
+    await startSession(purpose);
     router.replace('/session');
   };
 
@@ -56,6 +50,7 @@ export default function Setup() {
           autoFocus
           maxLength={60}
           returnKeyType="done"
+          onSubmitEditing={() => canStart && start()}
         />
         {recent.length > 0 && (
           <View style={styles.chips}>
@@ -66,30 +61,6 @@ export default function Setup() {
             ))}
           </View>
         )}
-
-        <View style={styles.section}>
-          <View style={styles.rowBetween}>
-            <Text style={styles.label}>DURATION</Text>
-            <Text style={styles.duration}>{minutes} min</Text>
-          </View>
-          <Slider
-            minimumValue={MIN_MINUTES}
-            maximumValue={MAX_MINUTES}
-            step={5}
-            value={minutes}
-            onValueChange={setMinutes}
-            minimumTrackTintColor={colors.text}
-            maximumTrackTintColor={colors.surfaceHigh}
-            thumbTintColor={colors.text}
-          />
-          <View style={styles.presets}>
-            {PRESETS.map((p) => (
-              <Pressable key={p} onPress={() => setMinutes(p)} style={[styles.preset, minutes === p && styles.presetOn]}>
-                <Text style={[styles.presetText, minutes === p && { color: colors.text }]}>{p === 120 ? '2h max' : `${p}m`}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
 
         <View style={styles.section}>
           <Text style={styles.label}>STAY AWAY FROM</Text>
@@ -110,7 +81,7 @@ export default function Setup() {
           onPress={start}
           style={({ pressed }) => [styles.start, !canStart && { opacity: 0.35 }, pressed && { opacity: 0.85 }]}
         >
-          <Text style={styles.startText}>Begin {minutes} min</Text>
+          <Text style={styles.startText}>Begin</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -133,13 +104,7 @@ const styles = StyleSheet.create({
   chip: { backgroundColor: colors.surface, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   chipText: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
   section: { gap: space.sm, marginTop: space.sm },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   label: { fontFamily: fonts.medium, fontSize: 12, color: colors.textMuted, letterSpacing: 2 },
-  duration: { fontFamily: fonts.light, fontSize: 28, color: colors.text },
-  presets: { flexDirection: 'row', gap: space.sm },
-  preset: { flex: 1, borderRadius: 12, paddingVertical: 10, alignItems: 'center', backgroundColor: colors.surface },
-  presetOn: { backgroundColor: colors.primary },
-  presetText: { fontFamily: fonts.medium, fontSize: 13, color: colors.textMuted },
   appRow: {
     flexDirection: 'row',
     alignItems: 'center',

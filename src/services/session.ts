@@ -1,7 +1,6 @@
 import notifee, { Event, EventType } from '@notifee/react-native';
 import { logSession } from '../db/sessions';
-import { MAX_MS, remainingMs, useTimer } from '../store/timer';
-import { MIN_MINUTES } from '../theme';
+import { elapsedMs, MAX_MS, useTimer } from '../store/timer';
 import { hideTimerNotification, requestNotificationPermission, showDoneNotification, showTimerNotification } from './notification';
 import { setRain } from './rain';
 
@@ -11,69 +10,64 @@ async function sync() {
   const s = get();
   setRain(s.status === 'running' && !s.muted);
   if (s.status === 'running' || s.status === 'paused') {
-    await showTimerNotification({ status: s.status, purpose: s.purpose, endAt: s.endAt, remainingMs: s.remainingMs });
+    await showTimerNotification({ status: s.status, purpose: s.purpose, elapsedMs: elapsedMs(s) });
   } else {
     stopServiceLoop?.();
     await hideTimerNotification();
   }
 }
 
-function focusedSec() {
-  const s = get();
-  return (s.durationMs - remainingMs(s)) / 1000;
-}
-
-export async function startSession(purpose: string, durationMs: number) {
+export async function startSession(purpose: string) {
   await requestNotificationPermission();
-  const ms = Math.min(Math.max(durationMs, MIN_MINUTES * 60 * 1000), MAX_MS);
   const now = Date.now();
-  get().set({ status: 'running', purpose: purpose.trim(), durationMs: ms, startedAt: now, endAt: now + ms, remainingMs: ms });
+  get().set({ status: 'running', purpose: purpose.trim(), startedAt: now, baseMs: 0, runSince: now });
   await sync();
 }
 
 export async function pauseSession() {
   const s = get();
   if (s.status !== 'running') return;
-  s.set({ status: 'paused', remainingMs: remainingMs(s) });
+  s.set({ status: 'paused', baseMs: elapsedMs(s), runSince: 0 });
   await sync();
 }
 
 export async function resumeSession() {
   const s = get();
   if (s.status !== 'paused') return;
-  s.set({ status: 'running', endAt: Date.now() + s.remainingMs });
+  s.set({ status: 'running', runSince: Date.now() });
   await sync();
 }
 
 export async function restartSession() {
   const s = get();
   if (s.status !== 'running' && s.status !== 'paused') return;
-  await logSession(s.purpose, s.startedAt, focusedSec(), false);
-  await startSession(s.purpose, s.durationMs);
+  await logSession(s.purpose, s.startedAt, elapsedMs(s) / 1000, false);
+  await startSession(s.purpose);
 }
 
 export async function stopSession() {
   const s = get();
   if (s.status === 'running' || s.status === 'paused') {
-    await logSession(s.purpose, s.startedAt, focusedSec(), false);
+    await logSession(s.purpose, s.startedAt, elapsedMs(s) / 1000, false);
   }
-  s.set({ status: 'idle' });
+  s.set({ status: 'idle', baseMs: 0, runSince: 0 });
   await sync();
 }
 
+// Only fires when the 2 hour cap is reached; a session normally ends with stopSession.
 export async function completeSession() {
   const s = get();
   if (s.status !== 'running') return;
-  s.set({ status: 'finished', remainingMs: 0 });
+  s.set({ status: 'finished', baseMs: MAX_MS, runSince: 0 });
   await Promise.all([
-    logSession(s.purpose, s.startedAt, s.durationMs / 1000, true),
+    logSession(s.purpose, s.startedAt, MAX_MS / 1000, true),
     sync(),
-    showDoneNotification(s.purpose, Math.round(s.durationMs / 60000)),
+    showDoneNotification(s.purpose, MAX_MS / 60000),
   ]);
 }
 
 export function dismissFinished() {
-  get().set({ status: 'idle' });
+  get().set({ status: 'idle', baseMs: 0, runSince: 0 });
 }
 
 export async function toggleMute() {
@@ -85,11 +79,11 @@ async function hydrated() {
   if (!useTimer.persist.hasHydrated()) await useTimer.persist.rehydrate();
 }
 
-// Called on app launch: finishes a session that ran out while the app was dead, or restores its notification.
+// Called on app launch: closes out a session that hit the cap while the app was dead, or restores its notification.
 export async function recoverSession() {
   await hydrated();
   const s = get();
-  if (s.status === 'running' && remainingMs(s) === 0) await completeSession();
+  if (s.status === 'running' && elapsedMs(s) >= MAX_MS) await completeSession();
   else if (s.status === 'running' || s.status === 'paused') await sync();
 }
 
@@ -108,7 +102,7 @@ export async function handleNotificationEvent({ type, detail }: Event) {
 
 let stopServiceLoop: (() => void) | null = null;
 
-// Runs while the foreground service is alive so the session completes even if no screen is mounted.
+// Runs while the foreground service is alive so the cap applies even with no screen mounted.
 export function registerBackgroundHandlers() {
   notifee.onBackgroundEvent(handleNotificationEvent);
   notifee.registerForegroundService(
@@ -116,7 +110,7 @@ export function registerBackgroundHandlers() {
       new Promise<void>((resolve) => {
         const id = setInterval(() => {
           const s = get();
-          if (s.status === 'running' && remainingMs(s) === 0) completeSession();
+          if (s.status === 'running' && elapsedMs(s) >= MAX_MS) completeSession();
         }, 1000);
         stopServiceLoop = () => {
           clearInterval(id);

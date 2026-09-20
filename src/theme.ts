@@ -34,6 +34,5 @@ export const fonts = {
 export const space = { xs: 4, sm: 8, md: 16, lg: 24, xl: 40 };
 
 export const MAX_MINUTES = 120;
-export const MIN_MINUTES = 5;
 
 export const DISTRACTIONS = ['Instagram', 'YouTube', 'X'];

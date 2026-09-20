@@ -20,7 +20,7 @@ export function requestNotificationPermission() {
   return notifee.requestPermission();
 }
 
-type TimerView = { status: 'running' | 'paused'; purpose: string; endAt: number; remainingMs: number };
+type TimerView = { status: 'running' | 'paused'; purpose: string; elapsedMs: number };
 
 export async function showTimerNotification(t: TimerView) {
   await ensureChannels();
@@ -28,7 +28,7 @@ export async function showTimerNotification(t: TimerView) {
   await notifee.displayNotification({
     id: TIMER_ID,
     title: running ? t.purpose : `${t.purpose} · paused`,
-    body: running ? `Stay off ${DISTRACTIONS.join(', ')}` : `${formatClock(t.remainingMs)} left`,
+    body: running ? `Stay off ${DISTRACTIONS.join(', ')}` : `${formatClock(t.elapsedMs)} focused`,
     android: {
       channelId: TIMER_CHANNEL,
       asForegroundService: true,
@@ -39,8 +39,8 @@ export async function showTimerNotification(t: TimerView) {
       color: colors.primary,
       showTimestamp: false,
       showChronometer: running,
-      chronometerDirection: 'down',
-      timestamp: running ? t.endAt : undefined,
+      chronometerDirection: 'up',
+      timestamp: running ? Date.now() - t.elapsedMs : undefined,
       pressAction: { id: 'default', launchActivity: 'default' },
       actions: [
         running

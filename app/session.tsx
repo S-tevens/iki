@@ -14,12 +14,12 @@ import {
   stopSession,
   toggleMute,
 } from '../src/services/session';
-import { remainingMs, useTimer } from '../src/store/timer';
+import { elapsedMs, MAX_MS, useTimer } from '../src/store/timer';
 import { colors, fonts, space } from '../src/theme';
 
 export default function Session() {
   const insets = useSafeAreaInsets();
-  const { status, purpose, durationMs, endAt, muted, restartPrompt, remainingMs: remaining } = useTimer();
+  const { status, purpose, baseMs, runSince, muted, restartPrompt } = useTimer();
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -28,24 +28,24 @@ export default function Session() {
     return () => clearInterval(id);
   }, [status]);
 
-  const left = remainingMs({ status, endAt, remainingMs: remaining }, now);
+  const elapsed = elapsedMs({ status, baseMs, runSince }, now);
 
   useEffect(() => {
-    if (status === 'running' && left === 0) completeSession();
-  }, [status, left]);
+    if (status === 'running' && elapsed >= MAX_MS) completeSession();
+  }, [status, elapsed]);
 
   useEffect(() => {
     if (status === 'idle') router.replace('/');
   }, [status]);
 
   const confirmRestart = () =>
-    Alert.alert('Restart session?', `The timer goes back to ${Math.round(durationMs / 60000)} minutes. Time so far is still saved.`, [
+    Alert.alert('Restart session?', 'The timer goes back to zero. Time so far is still saved.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Restart', style: 'destructive', onPress: restartSession },
     ]);
 
   const confirmStop = () =>
-    Alert.alert('End session early?', 'Your focused time so far will be saved.', [
+    Alert.alert('End session?', 'Your focused time will be saved.', [
       { text: 'Keep going', style: 'cancel' },
       { text: 'End', style: 'destructive', onPress: stopSession },
     ]);
@@ -86,15 +86,17 @@ export default function Session() {
       <View style={[styles.bottom, { paddingBottom: insets.bottom + space.xl }]}>
         {finished ? (
           <View style={styles.done}>
-            <Text style={styles.doneTitle}>Session complete</Text>
-            <Text style={styles.doneSub}>{Math.round(durationMs / 60000)} minutes of {purpose}</Text>
+            <Text style={styles.doneTitle}>Two hours done</Text>
+            <Text style={styles.doneSub}>
+              {Math.round(elapsed / 60000)} minutes of {purpose}
+            </Text>
             <Pressable style={styles.homeBtn} onPress={dismissFinished}>
               <Text style={styles.homeText}>Done</Text>
             </Pressable>
           </View>
         ) : (
           <>
-            <TimerRing remainingMs={left} totalMs={durationMs} label={status === 'paused' ? 'paused' : 'focus'} />
+            <TimerRing elapsedMs={elapsed} capMs={MAX_MS} label={status === 'paused' ? 'paused' : 'focus'} />
             <View style={styles.controls}>
               <Pressable onPress={confirmRestart} style={styles.sideBtn} hitSlop={8}>
                 <Ionicons name="refresh" size={22} color={colors.text} />

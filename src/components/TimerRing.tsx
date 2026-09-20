@@ -3,13 +3,13 @@ import Svg, { Circle } from 'react-native-svg';
 import { formatClock } from '../store/timer';
 import { colors, fonts } from '../theme';
 
-type Props = { remainingMs: number; totalMs: number; size?: number; label?: string };
+type Props = { elapsedMs: number; capMs: number; size?: number; label?: string };
 
-export function TimerRing({ remainingMs, totalMs, size = 260, label }: Props) {
+export function TimerRing({ elapsedMs, capMs, size = 260, label }: Props) {
   const stroke = 3;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const progress = totalMs ? remainingMs / totalMs : 0;
+  const progress = capMs ? Math.min(elapsedMs / capMs, 1) : 0;
 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
@@ -28,7 +28,7 @@ export function TimerRing({ remainingMs, totalMs, size = 260, label }: Props) {
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </Svg>
-      <Text style={styles.clock}>{formatClock(remainingMs)}</Text>
+      <Text style={styles.clock}>{formatClock(elapsedMs)}</Text>
       {label ? <Text style={styles.label}>{label}</Text> : null}
     </View>
   );
