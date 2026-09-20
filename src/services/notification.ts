@@ -36,6 +36,8 @@ export async function showTimerNotification(t: TimerView) {
       ongoing: true,
       onlyAlertOnce: true,
       smallIcon: 'ic_notification',
+      largeIcon: require('../../assets/icon.png'),
+      circularLargeIcon: true,
       color: colors.primary,
       showTimestamp: false,
       showChronometer: running,
